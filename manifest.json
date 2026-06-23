@@ -1,0 +1,9 @@
+{
+  "short_name": "บันทึกเวลานวกะ3",
+  "name": "บันทึกเวลานวกะ3",
+  "start_url": "index.html",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "display": "standalone",
+  "orientation": "portrait"
+}
