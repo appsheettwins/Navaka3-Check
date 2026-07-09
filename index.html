@@ -1,35 +1,1174 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <base target="_top">
-  <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>เช็คชื่อนวกะๅ3</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="screen-orientation" content="portrait">
+<meta name="x5-orientation" content="portrait">
+<title>ระบบเช็กชื่อพระนวกะ</title>
+<link rel="manifest" href="manifest.json">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght=300;400;500;600;700&display=swap');
   
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      /* ใช้ dvh เพื่อคำนวณความสูงตามพื้นที่หน้าจอที่เหลืออยู่จริงของแต่ละเบราว์เซอร์ */
-      height: 100dvh; 
-      overflow: hidden;
-      background-color: #ffffff;
+  :root {
+    --saffron:     #E07B00;
+    --saffron-lt:  #FFF3E0;
+    --saffron-dk:  #BF6000;
+    --gold:        #FFB300;
+    --maroon:      #6D1C1C;
+    --maroon-lt:   #F5E6E6;
+
+    /* หมู่ */
+    --g1: #1565C0; --g1-lt: #E3F2FD; --g1-txt: #fff;
+    --g2: #2E7D32; --g2-lt: #E8F5E9; --g2-txt: #fff;
+    --g3: #F57F17; --g3-lt: #FFF8E1; --g3-txt: #fff;
+    --g4: #6A1B9A; --g4-lt: #F3E5F5; --g4-txt: #fff;
+
+    /* รอบ */
+    --s-morning:   #0277BD; --s-morning-lt: #E1F5FE;
+    --s-midday:    #2E7D32; --s-midday-lt:  #E8F5E9;
+    --s-afternoon: #E65100; --s-afternoon-lt:#FBE9E7;
+    --s-evening:   #4527A0; --s-evening-lt: #EDE7F6;
+
+    /* สถานะ */
+    --st-come:    #1B5E20; --st-come-lt:    #C8E6C9;
+    --st-late:    #E65100; --st-late-lt:    #FFE0B2;
+    --st-sick:    #0D47A1; --st-sick-lt:    #BBDEFB;
+    --st-leave:   #880E4F; --st-leave-lt:   #F8BBD0;
+
+    --bg:  #F7F3EE;
+    --card: #FFFFFF;
+    --txt:  #1A0E09;
+    --txt2: #6D5A4E;
+    --border: #E0D5CC;
+    --radius: 12px;
+    --shadow: 0 2px 8px rgba(0,0,0,.05);
+
+    /* จุดสัมผัสขั้นต่ำ */
+    --tap-min: 36px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { 
+    -webkit-text-size-adjust: 100%; 
+    height: 100%;
+    overflow: hidden; 
+  }
+
+  body {
+    font-family: 'Sarabun', sans-serif;
+    background: #000000; 
+    color: var(--txt);
+    font-size: 14px; 
+    line-height: 1.4;
+    display: flex;
+    justify-content: center; 
+    align-items: center;     
+  }
+
+  /* คอนเทนเนอร์หลักแอปพลิเคชัน */
+  .app-container {
+    width: 100%;
+    max-width: 480px; 
+    height: 100vh; 
+    background: var(--bg);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+  }
+
+  @media (max-width: 480px) {
+    .app-container {
+      max-width: 100%;
+      height: 100vh;
+      box-shadow: none;
     }
-    
-    iframe {
-      width: 100%;
-      /* ปรับ iframe ให้ใช้ความสูงแบบ dvh ด้วยเช่นกัน */
-      height: 100dvh;
-      border: none;
-      display: block;
-    }
-  </style>
+  }
+
+  .phone-scroll-area {
+    flex: 1;
+    width: 100%;
+    overflow-y: auto; 
+    position: relative;
+    background: var(--bg);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* แจ้งเตือนหน้าจอแนวนอนบนมือถือ */
+  .rotate-warning {
+    display: none;
+    position: fixed; inset: 0; z-index: 9999;
+    background: var(--maroon);
+    color: #fff;
+    flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center; padding: 24px;
+    font-family: 'Sarabun', sans-serif;
+  }
+  .rotate-warning .icon { font-size: 24px; margin-bottom: 10px; }
+  .rotate-warning .msg { font-size: 16px; font-weight: 700; line-height: 1.5; }
+  
+  @media (max-width: 768px) and (orientation: landscape) and (max-height: 600px) {
+    .rotate-warning { display: flex; }
+  }
+
+  /* Header */
+  .app-header {
+    background: linear-gradient(135deg, var(--maroon) 0%, #8B2500 50%, var(--saffron-dk) 100%);
+    color: #fff;
+    padding: 14px 16px; 
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,.15);
+    width: 100%;
+  }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .header-title { font-size: 16px; font-weight: 700; line-height: 1.2; }
+  .header-sub { font-size: 11px; opacity: .85; margin-top: 2px; }
+  
+  .header-sync-btn {
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    border-radius: 50%;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #fff;
+    font-size: 14px;
+    transition: background 0.2s, transform 0.2s;
+  }
+  .header-sync-btn:active {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(0.92) rotate(45deg);
+  }
+
+  /* Bottom Nav */
+  .bottom-nav {
+    position: absolute; 
+    bottom: 0; 
+    left: 0;
+    background: var(--card);
+    border-top: 1px solid var(--border);
+    display: flex;
+    z-index: 100;
+    box-shadow: 0 -2px 10px rgba(0,0,0,.06);
+    padding: 2px 0 4px;
+    width: 100%;
+  }
+  .nav-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    padding: 2px 2px;
+    min-height: 36px;
+    font-size: 10px;
+    font-family: 'Sarabun', sans-serif;
+    color: var(--txt2); background: none; border: none; cursor: pointer;
+    transition: all .2s ease;
+    gap: 0px;
+  }
+  .nav-btn .nav-icon { 
+    font-size: 22px;
+    transition: all .2s;
+  }
+  
+  .nav-btn.active { 
+    color: var(--saffron-dk);
+    transform: translateY(-1px);
+    font-weight: 700;
+  }
+  .nav-btn.active .nav-icon { 
+    font-size: 23px;
+    filter: drop-shadow(0 1px 2px rgba(224,123,0,.3));
+  }
+
+  /* Pages */
+  .page { display: none; padding: 12px; padding-bottom: 56px; animation: fadeIn .2s ease; }
+  .page.active { display: block; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+
+  /* Card */
+  .card {
+    background: var(--card); border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 12px; margin-bottom: 10px;
+    position: relative;
+  }
+  .card-title {
+    font-size: 14px; font-weight: 700; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 5px; color: var(--maroon);
+  }
+
+  /* Group Tabs */
+  .group-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .gtab {
+    padding: 6px 12px; border-radius: 16px; font-size: 13px; font-weight: 600;
+    border: 1px solid var(--border);
+    cursor: pointer; transition: all .2s;
+    background: var(--bg); color: var(--txt2);
+    min-height: 32px;
+  }
+  .gtab.active-g1 { background: var(--g1); color: var(--g1-txt); border-color: var(--g1); }
+  .gtab.active-g2 { background: var(--g2); color: var(--g2-txt); border-color: var(--g2); }
+  .gtab.active-g3 { background: var(--g3); color: var(--g3-txt); border-color: var(--g3); }
+  .gtab.active-g4 { background: var(--g4); color: var(--g4-txt); border-color: var(--g4); }
+  .gtab.active-all { background: var(--maroon); color: #fff; border-color: var(--maroon); }
+
+  /* Session Tabs */
+  .session-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
+  .stab {
+    padding: 8px 2px; border-radius: 8px; font-size: 12px; font-weight: 700;
+    border: 1.5px solid transparent; cursor: pointer; text-align: center;
+    transition: all .2s; background: var(--bg); color: var(--txt2);
+    line-height: 1.3;
+  }
+  .stab-morning  { border-color: var(--s-morning);  }
+  .stab-midday   { border-color: var(--s-midday);   }
+  .stab-afternoon{ border-color: var(--s-afternoon);}
+  .stab-evening  { border-color: var(--s-evening);  }
+  
+  .stab-morning.active  { background: var(--s-morning);  color:#fff; }
+  .stab-midday.active   { background: var(--s-midday);   color:#fff; }
+  .stab-afternoon.active{ background: var(--s-afternoon);color:#fff; }
+  .stab-evening.active  { background: var(--s-evening);  color:#fff; }
+
+  /* ปุ่มรอบเวลาที่โดน Disabled บล็อกกด */
+  .stab:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    border-color: #cbd5e1 !important;
+    background: #e2e8f0 !important;
+    color: #94a3b8 !important;
+  }
+
+  /* Monk List */
+  .monk-list { display: flex; flex-direction: column; gap: 8px; }
+  
+  .monk-item {
+    display: grid; grid-template-columns: 60px 1fr;
+    gap: 10px; align-items: center;
+    background: var(--bg); border-radius: 10px;
+    padding: 8px 10px; border: 1px solid var(--border);
+    transition: border-color .2s;
+  }
+  .monk-item.g1 { border-left: 4px solid var(--g1); }
+  .monk-item.g2 { border-left: 4px solid var(--g2); }
+  .monk-item.g3 { border-left: 4px solid var(--g3); }
+  .monk-item.g4 { border-left: 4px solid var(--g4); }
+
+  /* รูปภาพสไตล์กลมหรู และระบบแสดงผลทับซ้อน (Layered Fallback) */
+  .monk-photo {
+    width: 60px; height: 60px; border-radius: 50%; object-fit: cover;
+    border: 2px solid var(--saffron);
+    background: var(--saffron-lt);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; overflow: hidden;
+    position: relative;
+  }
+  .monk-photo img { 
+    width: 100%; 
+    height: 100%; 
+    object-fit: cover; 
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 2;
+  }
+  .monk-photo span {
+    position: absolute;
+    z-index: 1;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .monk-info { display: flex; flex-direction: column; gap: 2px; }
+  
+  .monk-name { font-size: 14px; font-weight: 700; line-height: 1.3; color: #1565C0; overflow-wrap: break-word; }
+  .monk-alias { font-size: 12px; color: var(--txt2); margin-bottom: 2px; }
+  
+  .badge-g1 { background: var(--g1-lt); color: var(--g1); }
+  .badge-g2 { background: var(--g2-lt); color: var(--g2); }
+  .badge-g3 { background: var(--g3-lt); color: var(--g3); }
+  .badge-g4 { background: var(--g4-lt); color: var(--g4); }
+
+  /* Status Buttons */
+  .status-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 4px; }
+  .sbtn {
+    padding: 2px 2px; border-radius: 6px;
+    font-size: 11px; font-weight: 700; line-height: 1.2;
+    border: 1px solid; cursor: pointer; text-align: center; transition: all .15s;
+    font-family: 'Sarabun', sans-serif;
+    min-height: 22px;
+  }
+  .sbtn-come    { border-color:var(--st-come);   color:var(--st-come);   background:#fff; }
+  .sbtn-late    { border-color:var(--st-late);   color:var(--st-late);   background:#fff; }
+  .sbtn-sick    { border-color:var(--st-sick);   color:var(--st-sick);   background:#fff; }
+  .sbtn-leave   { border-color:var(--st-leave);  color:var(--st-leave);  background:#fff; }
+  
+  .sbtn-come.sel  { background:var(--st-come);   color:#fff; transform: scale(1.02); }
+  .sbtn-late.sel  { background:var(--st-late);   color:#fff; transform: scale(1.02); }
+  .sbtn-sick.sel  { background:var(--st-sick);   color:#fff; transform: scale(1.02); }
+  .sbtn-leave.sel { background:var(--st-leave);  color:#fff; transform: scale(1.02); }
+
+  .sbtn:disabled, .gtab:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .sbtn.sel:disabled {
+    opacity: 0.85;
+  }
+
+  /* ปุ่มเลือกทั้งหมด */
+  .select-all-container {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 8px;
+  }
+  .select-all-btn {
+    background: #e2f0d9;
+    color: #385723;
+    border: 1.5px dashed #385723;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: background 0.2s, transform 0.2s;
+  }
+  .select-all-btn:active {
+    background: #c5e0b4;
+    transform: scale(0.96);
+  }
+  .select-all-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Save Button */
+  .save-btn {
+    width: 100%;
+    padding: 12px; border-radius: var(--radius);
+    background: linear-gradient(135deg, var(--saffron-dk), var(--gold));
+    color: #fff; font-size: 15px; font-weight: 700;
+    border: none; cursor: pointer; margin-top: 10px;
+    font-family: 'Sarabun', sans-serif;
+    box-shadow: 0 3px 8px rgba(224,123,0,.2);
+    transition: transform .15s, box-shadow .15s;
+    min-height: 44px;
+  }
+  .save-btn:active:not(:disabled) { transform: scale(.98); box-shadow: 0 2px 4px rgba(224,123,0,.15); }
+  .save-btn:disabled {
+    background: #cbd5e1;
+    color: #94a3b8;
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+
+  /* Toast */
+  .toast {
+    position: absolute;
+    bottom: 50px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: #2C1810; color: #fff; padding: 10px 16px; border-radius: 18px;
+    font-size: 13px; font-weight: 600; opacity: 0;
+    transition: all .3s; pointer-events: none; z-index: 999;
+    width: 85%; text-align: center;
+    box-shadow: 0 3px 10px rgba(0,0,0,.15);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.success { background: var(--st-come); }
+  .toast.error   { background: var(--maroon); }
+  .toast.warning { background: var(--saffron-dk); }
+
+  /* Stats Page */
+  .stat-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .stat-table th { background: var(--maroon); color: #fff; padding: 8px 4px; text-align: center; font-weight: 700; }
+  .stat-table td { padding: 8px 4px; text-align: center; border-bottom: 1px solid var(--border); }
+  .stat-table tr:nth-child(even) td { background: var(--saffron-lt); }
+
+  /* Badge สถานะในตารางสถิติ */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+    height: 20px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 700;
+    text-align: center;
+    min-width: 44px;
+    box-sizing: border-box;
+    vertical-align: middle;
+  }
+  .status-badge.come  { background: var(--st-come-lt);  color: var(--st-come); }
+  .status-badge.late  { background: var(--st-late-lt);  color: var(--st-late); }
+  .status-badge.sick  { background: var(--st-sick-lt);  color: var(--st-sick); }
+  .status-badge.leave { background: var(--st-leave-lt); color: var(--st-leave); }
+  .status-badge.empty { background: #e2e8f0; color: #94a3b8; font-weight: normal; }
+
+  .summary-chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
+  .chip {
+    padding: 8px 4px; border-radius: 8px;
+    text-align: center; font-weight: 700;
+  }
+  .chip-come  { background: var(--st-come-lt);  color: var(--st-come); }
+  .chip-late  { background: var(--st-late-lt);  color: var(--st-late); }
+  .chip-sick  { background: var(--st-sick-lt);  color: var(--st-sick); }
+  .chip-leave { background: var(--st-leave-lt); color: var(--st-leave);}
+  .chip .chip-num { font-size: 16px; display: block; line-height: 1; margin-bottom: 3px; }
+  .chip .chip-lbl { font-size: 11px; }
+
+  /* Loading */
+  .loading-overlay {
+    position: absolute; inset: 0; background: rgba(255,255,255,.85);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 999; gap: 10px;
+  }
+  .spinner {
+    width: 36px; height: 36px; border-radius: 50%;
+    border: 3px solid var(--saffron-lt); border-top-color: var(--saffron-dk);
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 14px; color: var(--txt2); font-weight: 600; }
+
+  .empty { text-align: center; padding: 20px; color: var(--txt2); font-size: 13px; }
+  .empty .empty-icon { font-size: 20px; margin-bottom: 6px; }
+</style>
 </head>
 <body>
 
-  <iframe scrolling="yes" src="https://script.google.com/macros/s/AKfycbwhrrS_JBOoMT4uouCkMOKdDKymLLVJ37GX0RnE4L0yZMDNp3uY9N-izYoq4Nn26-uECQ/exec"></iframe>
+<div class="rotate-warning">
+  <div class="icon">📱</div>
+  <div class="msg">แอปนี้ใช้งานในแนวตั้งเท่านั้น<br>กรุณาหมุนจอกลับเป็นแนวตั้ง</div>
+</div>
 
+<div class="app-container">
+
+  <!-- ส่วนหัวของแอปพลิเคชัน -->
+  <div class="app-header">
+    <div class="header-left">
+      <div>
+        <div class="header-title">ระบบเช็กชื่อพระนวกะ</div>
+        <div class="header-sub" id="headerDate">กำลังโหลด...</div>
+      </div>
+    </div>
+    <button class="header-sync-btn" onclick="syncDataFromServer()" title="ซิงก์ดึงข้อมูลจาก Sheets">
+      🔄
+    </button>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loadingOverlayText">กำลังโหลดข้อมูล...</div>
+  </div>
+
+  <div class="phone-scroll-area">
+
+    <!-- หน้าบันทึกหลัก -->
+    <div class="page active" id="pageRecord">
+      <input type="hidden" id="recordDate">
+
+      <div class="card">
+        <div class="card-title" style="margin-bottom: 4px;">⛩️ รอบการเช็กชื่อ</div>
+        <!-- แสดงข้อความคำเตือนตามข้อกำหนดต่อจากข้อความ "รอบการเช็กชื่อ" -->
+        <div style="font-size: 15px; color: #b91c1c; margin-bottom: 12px; font-weight: 800; line-height: 1.4; border-left: 3px solid #b91c1c; padding-left: 8px;">
+          สามารถบันทึกและแก้ไข ตามช่วงเวลาที่กำหนดเท่านั้น
+        </div>
+        
+        <div class="session-tabs" id="sessionTabsContainer">
+          <button class="stab stab-morning" id="btnSessionMorning" onclick="selectSession('เช้า',this)">🌅 เช้า<br><span style="font-size: 10px; font-weight: normal; opacity: 0.85;">(04.00 - 06.00)</span></button>
+          <button class="stab stab-midday" id="btnSessionMidday" onclick="selectSession('สาย',this)">☀️ สาย<br><span style="font-size: 10px; font-weight: normal; opacity: 0.85;">(08.00 - 10.00)</span></button>
+          <button class="stab stab-afternoon" id="btnSessionAfternoon" onclick="selectSession('บ่าย',this)">🌤️ บ่าย<br><span style="font-size: 10px; font-weight: normal; opacity: 0.85;">(13.00 - 15.00)</span></button>
+          <button class="stab stab-evening" id="btnSessionEvening" onclick="selectSession('ค่ำ',this)">🌙 ค่ำ<br><span style="font-size: 10px; font-weight: normal; opacity: 0.85;">(18.00 - 20.00)</span></button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">👥 แยกหมู่</div>
+        <div class="group-tabs" id="groupTabs">
+          <button class="gtab active-all" onclick="filterGroup('all',this)">รวม</button>
+          <button class="gtab" onclick="filterGroup('1',this)" data-g="1">หมู่ 1</button>
+          <button class="gtab" onclick="filterGroup('2',this)" data-g="2">หมู่ 2</button>
+          <button class="gtab" onclick="filterGroup('3',this)" data-g="3">หมู่ 3</button>
+          <button class="gtab" onclick="filterGroup('4',this)" data-g="4">หมู่ 4</button>
+        </div>
+
+        <!-- ปุ่มอำนวยความสะดวกมาทั้งหมดและตัวนับสะสมในรอบเวลานั้นๆ -->
+        <div class="select-all-container" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+          <div id="sessionStatusSummary" style="display: flex; gap: 4px; font-size: 11px; font-weight: bold; align-items: center;">
+            <span style="color: var(--st-come); background: var(--st-come-lt); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--st-come);">มา: <span id="sumCome" style="font-size: 12px; font-weight: 800;">0</span></span>
+            <span style="color: var(--st-late); background: var(--st-late-lt); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--st-late);">สาย: <span id="sumLate" style="font-size: 12px; font-weight: 800;">0</span></span>
+            <span style="color: var(--st-sick); background: var(--st-sick-lt); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--st-sick);">ป่วย: <span id="sumSick" style="font-size: 12px; font-weight: 800;">0</span></span>
+            <span style="color: var(--st-leave); background: var(--st-leave-lt); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--st-leave);">กิจ: <span id="sumLeave" style="font-size: 12px; font-weight: 800;">0</span></span>
+          </div>
+          <button class="select-all-btn" id="btnSelectAll" onclick="markAllVisibleAsCome()" style="margin-bottom: 0;">
+            <span>✅ ทำเครื่องหมาย "มาทั้งหมด"</span>
+          </button>
+        </div>
+
+        <div class="monk-list" id="monkList">
+          <div class="empty"><div class="empty-icon">🔄</div>กำลังโหลดรายชื่อ...</div>
+        </div>
+
+        <button class="save-btn" id="btnSaveAttendance" onclick="saveAttendance()">💾 บันทึกการเช็กชื่อ</button>
+      </div>
+    </div>
+
+    <!-- หน้าสถิติรายงานผล (แสดงเฉพาะรายบุคคลตามเงื่อนไขใหม่) -->
+    <div class="page" id="pageStats">
+      <input type="hidden" id="statFrom">
+      <input type="hidden" id="statTo">
+
+      <div class="card">
+        <div class="card-title">📊 สรุปสถิติสะสมรายบุคคล</div>
+        <div class="group-tabs" id="statGroupTabs" style="margin-top:10px; margin-bottom: 0;">
+          <button class="gtab active-all" onclick="switchStatGroup('all',this)">รวม</button>
+          <button class="gtab" onclick="switchStatGroup('1',this)" data-g="1">หมู่ 1</button>
+          <button class="gtab" onclick="switchStatGroup('2',this)" data-g="2">หมู่ 2</button>
+          <button class="gtab" onclick="switchStatGroup('3',this)" data-g="3">หมู่ 3</button>
+          <button class="gtab" onclick="switchStatGroup('4',this)" data-g="4">หมู่ 4</button>
+        </div>
+      </div>
+
+      <div class="summary-chips" id="summaryChips">
+        <div class="chip chip-come"><span class="chip-num">-</span><div class="chip-lbl">มา</div></div>
+        <div class="chip chip-late"><span class="chip-num">-</span><div class="chip-lbl">สาย</div></div>
+        <div class="chip chip-sick"><span class="chip-num">-</span><div class="chip-lbl">ลาป่วย</div></div>
+        <div class="chip chip-leave"><span class="chip-num">-</span><div class="chip-lbl">ลากิจ</div></div>
+      </div>
+
+      <div class="card" style="overflow-x:auto;">
+        <table class="stat-table" id="statTable">
+          <thead id="statHead">
+            <!-- จัดการหัวตารางไดนามิกผ่าน Javascript -->
+          </thead>
+          <tbody id="statBody"><tr><td colspan="5" style="padding:15px;color:var(--txt2);">กำลังคำนวณสรุปสถิติล่าสุด...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- หน้าแสดงรายชื่อพระนวกะทั้งหมด -->
+    <div class="page" id="pageMonks">
+      <div class="card">
+        <div class="card-title">📋 รายชื่อพระนวกะทั้งหมด</div>
+        <div class="group-tabs" id="monkListGroupTabs">
+          <button class="gtab active-all" onclick="filterMonkList('all',this)">ทั้งหมด</button>
+          <button class="gtab" onclick="filterMonkList('1',this)" data-g="1">หมู่ 1</button>
+          <button class="gtab" onclick="filterMonkList('2',this)" data-g="2">หมู่ 2</button>
+          <button class="gtab" onclick="filterMonkList('3',this)" data-g="3">หมู่ 3</button>
+          <button class="gtab" onclick="filterMonkList('4',this)" data-g="4">หมู่ 4</button>
+        </div>
+        <div class="monk-list" id="fullMonkList"></div>
+      </div>
+    </div>
+
+  </div> <!-- สิ้นสุด phone-scroll-area -->
+
+  <!-- เมนูนำทางด้านล่าง -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" id="btnNavRecord" onclick="showPage('pageRecord',this)">
+      <span class="nav-icon">📝</span>บันทึก
+    </button>
+    <button class="nav-btn" id="btnNavStats" onclick="showPage('pageStats',this)">
+      <span class="nav-icon">📊</span>สถิติ
+    </button>
+    <button class="nav-btn" onclick="showPage('pageMonks',this)">
+      <span class="nav-icon">📋</span>รายชื่อ
+    </button>
+  </nav>
+
+  <!-- Toast แจ้งเตือนสถานะมุมล่าง -->
+  <div class="toast" id="toast"></div>
+
+</div>
+
+<script>
+// ตั้งค่าเชื่อมต่อ URL เว็บแอปตรงจาก Google Apps Script ของคุณโดยตรง
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwhrrS_JBOoMT4uouCkMOKdDKymLLVJ37GX0RnE4L0yZMDNp3uY9N-izYoq4Nn26-uECQ/exec';
+
+// กำหนดกรอบเวลาสำหรับใช้ตรวจสอบฝั่งไคลเอนต์และเพื่อแสดงแจ้งเตือน
+const SESSION_INFO = {
+  'เช้า': { range: '04.00 - 06.00 น.', start: 4.0, end: 6.0 },
+  'สาย': { range: '08.00 - 10.00 น.', start: 8.0, end: 10.0 },
+  'บ่าย': { range: '13.00 - 15.00 น.', start: 13.0, end: 15.0 },
+  'ค่ำ': { range: '18.00 - 20.00 น.', start: 18.0, end: 20.0 }
+};
+
+let allMonks = [];
+let attendance = {};  
+let currentGroup = 'all';
+let currentSession = 'เช้า'; 
+let statsMode = 'person'; // ปรับโหมดเริ่มต้นเป็นแบบรายบุคคลโดยตรง
+let statsGroup = 'all';
+let currentMonkListGroup = 'all';
+
+// ระบบ In-Memory Database สำหรับเก็บข้อมูลประวัติการเช็กชื่อทั้งหมดที่โหลดมารอบเดียวตอนเปิดแอป
+let attendanceDatabase = [];
+
+function normalizeDateString(dateInput) {
+  if (!dateInput) return '';
+  let d = (dateInput instanceof Date) ? dateInput : new Date(dateInput);
+  if (isNaN(d.getTime())) {
+    const cleanStr = String(dateInput).replace(/"/g, '').trim();
+    const parts = cleanStr.split(/[-/T ]/);
+    if (parts.length >= 3) {
+      if (parts[0].length === 4) {
+        return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+      } else {
+        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      }
+    }
+    return '';
+  }
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function isTodaySelected() {
+  const selectedDateStr = normalizeDateString(document.getElementById('recordDate').value);
+  const todayStr = normalizeDateString(new Date());
+  return selectedDateStr === todayStr;
+}
+
+function checkTimeLimit(session) {
+  const now = new Date();
+  const hour = now.getHours();
+  const min = now.getMinutes();
+  const currentTimeVal = hour + (min / 60);
+  
+  const range = SESSION_INFO[session];
+  if (!range) return false;
+  return currentTimeVal >= range.start && currentTimeVal <= range.end;
+}
+
+// เลือกเวลาตามช่วงเวลาอัตโนมัติเมื่อเปิดแอป
+function autoSelectSessionBasedOnTime() {
+  const now = new Date();
+  const hour = now.getHours();
+  const min = now.getMinutes();
+  const val = hour + (min / 60);
+  
+  let session = 'เช้า';
+  if (val >= 4.0 && val <= 6.0) session = 'เช้า';
+  else if (val >= 8.0 && val <= 10.0) session = 'สาย';
+  else if (val >= 13.0 && val <= 15.0) session = 'บ่าย';
+  else if (val >= 18.0 && val <= 20.0) session = 'ค่ำ';
+  else {
+    if (val > 6.0 && val < 8.0) session = 'สาย';
+    else if (val > 10.0 && val < 13.0) session = 'บ่าย';
+    else if (val > 15.0 && val < 18.0) session = 'ค่ำ';
+    else session = 'เช้า';
+  }
+  
+  currentSession = session;
+}
+
+function updateUIEditRights() {
+  const isToday = isTodaySelected();
+  const inTimeLimit = checkTimeLimit(currentSession);
+  const btnSave = document.getElementById('btnSaveAttendance');
+  const btnSelectAll = document.getElementById('btnSelectAll');
+  
+  // จัดการเปิด/ปิดสิทธิ์การกดรอบเวลา (เลือกรอบได้เฉพาะรอบที่เวลาปัจจุบันผ่านเกณฑ์เท่านั้น)
+  document.querySelectorAll('.stab').forEach(btn => {
+    let btnSession = '';
+    if (btn.id === 'btnSessionMorning') btnSession = 'เช้า';
+    else if (btn.id === 'btnSessionMidday') btnSession = 'สาย';
+    else if (btn.id === 'btnSessionAfternoon') btnSession = 'บ่าย';
+    else if (btn.id === 'btnSessionEvening') btnSession = 'ค่ำ';
+
+    const isBtnAllowed = isToday && checkTimeLimit(btnSession);
+    btn.disabled = !isBtnAllowed; // ถ้าไม่อยู่ในเวลาจำกัด จะกดคลิกไม่ได้
+
+    if (btnSession === currentSession) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+
+  if (!isToday || !inTimeLimit) {
+    btnSave.disabled = true;
+    btnSelectAll.disabled = true;
+  } else {
+    btnSave.disabled = false;
+    btnSelectAll.disabled = false;
+  }
+
+  renderMonkList();
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const todayStr = normalizeDateString(new Date());
+  document.getElementById('recordDate').value = todayStr;
+  document.getElementById('statFrom').value = todayStr;
+  document.getElementById('statTo').value = todayStr;
+
+  const d = new Date();
+  document.getElementById('headerDate').textContent =
+    d.toLocaleDateString('th-TH', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+  autoSelectSessionBasedOnTime();
+  await loadInitialData();
+});
+
+async function apiGet(params) {
+  const url = SCRIPT_URL + '?' + new URLSearchParams(params);
+  const res = await fetch(url);
+  return res.json();
+}
+
+async function apiPost(body) {
+  const res = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify(body)
+  });
+  return res.json();
+}
+
+// ============================================================
+// ฟังก์ชันหลัก: ดึงข้อมูลรวมประวัติพระนวกะและประวัติการเช็กชื่อทั้งหมดรอบเดียว (ความเร็วสูง)
+// ============================================================
+async function loadInitialData() {
+  showLoading(true, "กำลังซิงก์ข้อมูลทั้งหมดจากระบบคลาวด์...");
+  try {
+    const res = await apiGet({ action: 'getInitialData' });
+    if (res.status === "success") {
+      allMonks = res.monks || [];
+      attendanceDatabase = res.attendance || [];
+      
+      renderFullMonkList(currentMonkListGroup);
+      extractAttendanceFromLocalDB();
+    } else {
+      throw new Error(res.error || "เกิดข้อผิดพลาดในการโหลดข้อมูล");
+    }
+  } catch (e) {
+    showToast('เชื่อมต่อคลาวด์ขัดข้อง: ' + e.message, 'error');
+  } finally {
+    showLoading(false);
+  }
+}
+
+// ซิงก์ดึงข้อมูลสดเมื่อผู้ใช้งานต้องการรีเฟรชหน้าจอ (Manual Refetch)
+async function syncDataFromServer() {
+  showToast('🔄 กำลังอัปเดตข้อมูลประวัติแบบ Realtime...', 'warning');
+  await loadInitialData();
+}
+
+// แยกและดึงประวัติการเข้าเรียนที่มีในหน่วยความจำของเครื่อง (In-memory Search)
+function extractAttendanceFromLocalDB() {
+  const rawDate = document.getElementById('recordDate').value;
+  const date = normalizeDateString(rawDate);
+  
+  updateUIEditRights();
+  attendance = {};
+
+  // ค้นหาในประวัติที่แคชไว้
+  attendanceDatabase.forEach(record => {
+    if (record.date === date && record.session === currentSession) {
+      const monk = allMonks.find(m => (m.name + ' ' + m.alias) === record.monkName);
+      if (monk) {
+        attendance[monk.order] = record.status;
+      }
+    }
+  });
+
+  renderMonkList();
+}
+
+function renderMonkList() {
+  const filtered = currentGroup === 'all'
+    ? allMonks
+    : allMonks.filter(m => String(m.group) === currentGroup);
+
+  const container = document.getElementById('monkList');
+  if (!filtered.length) {
+    container.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div>ไม่พบรายชื่อในหมู่นี้</div>';
+    document.getElementById('sumCome').textContent = '0';
+    document.getElementById('sumLate').textContent = '0';
+    document.getElementById('sumSick').textContent = '0';
+    document.getElementById('sumLeave').textContent = '0';
+    return;
+  }
+
+  const isEditable = isTodaySelected() && checkTimeLimit(currentSession);
+
+  container.innerHTML = filtered.map(m => {
+    const g = m.group;
+    const status = attendance[m.order] || '';
+    
+    // แสดงผลรูปภาพแบบทับซ้อน (Layered Fallback)
+    const photoHtml = m.photo
+      ? `<span>🧘</span><img src="${m.photo}" onerror="this.style.display='none'">`
+      : '<span>🧘</span>';
+
+    return `
+    <div class="monk-item g${g}" id="monk-${m.order}">
+      <div class="monk-photo">${photoHtml}</div>
+      <div class="monk-info">
+        <div class="monk-name">${m.name} ${m.alias}</div>
+        <div class="status-row">
+          <button class="sbtn sbtn-come ${status==='มา'?'sel':''}"     ${!isEditable ? 'disabled' : ''} onclick="setStatus(${m.order},'มา',this)">มา</button>
+          <button class="sbtn sbtn-late ${status==='สาย'?'sel':''}"    ${!isEditable ? 'disabled' : ''} onclick="setStatus(${m.order},'สาย',this)">สาย</button>
+          <button class="sbtn sbtn-sick ${status==='ลาป่วย'?'sel':''}" ${!isEditable ? 'disabled' : ''} onclick="setStatus(${m.order},'ลาป่วย',this)">ลาป่วย</button>
+          <button class="sbtn sbtn-leave ${status==='ลากิจ'?'sel':''}" ${!isEditable ? 'disabled' : ''} onclick="setStatus(${m.order},'ลากิจ',this)">ลากิจ</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  updateSessionStatusSummary();
+}
+
+// ฟังก์ชันคำนวณจำนวนสถานะในรอบเวลาของหมู่ที่เลือกขณะนั้นทันที
+function updateSessionStatusSummary() {
+  const filtered = currentGroup === 'all'
+    ? allMonks
+    : allMonks.filter(m => String(m.group) === currentGroup);
+
+  let come = 0, late = 0, sick = 0, leave = 0;
+  filtered.forEach(m => {
+    const status = attendance[m.order];
+    if (status === 'มา') come++;
+    else if (status === 'สาย') late++;
+    else if (status === 'ลาป่วย') sick++;
+    else if (status === 'ลากิจ') leave++;
+  });
+
+  document.getElementById('sumCome').textContent = come;
+  document.getElementById('sumLate').textContent = late;
+  document.getElementById('sumSick').textContent = sick;
+  document.getElementById('sumLeave').textContent = leave;
+}
+
+// ฟังก์ชัน "มาทั้งหมด" สำหรับกลุ่มสมาชิกที่กําลังแสดง
+function markAllVisibleAsCome() {
+  if (!isTodaySelected() || !checkTimeLimit(currentSession)) {
+    showToast('⚠️ ไม่สามารถแก้ไขได้เนื่องจากอยู่นอกเวลาที่กำหนด', 'warning');
+    return;
+  }
+
+  const filtered = currentGroup === 'all'
+    ? allMonks
+    : allMonks.filter(m => String(m.group) === currentGroup);
+
+  if (filtered.length === 0) return;
+
+  filtered.forEach(m => {
+    attendance[m.order] = 'มา';
+  });
+
+  renderMonkList();
+  showToast('✅ ทำเครื่องหมาย "มา" ให้แก่พระนวกะทั้งหมดในหมู่นี้แล้ว', 'success');
+}
+
+function renderFullMonkList(group) {
+  const filtered = group === 'all'
+    ? allMonks
+    : allMonks.filter(m => String(m.group) === group);
+
+  const container = document.getElementById('fullMonkList');
+  if (!filtered.length) {
+    container.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div>ไม่พบข้อมูลรายชื่อ</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(m => {
+    const g = m.group;
+    
+    const photoHtml = m.photo
+      ? `<span>🧘</span><img src="${m.photo}" onerror="this.style.display='none'">`
+      : '<span>🧘</span>';
+
+    // คำนวณจำนวน มา, สาย, ลาป่วย, ลากิจ ของพระนวกะแต่ละรูปสะสมจากแคชประวัติ
+    const monkFullName = m.name + ' ' + m.alias;
+    let comeCount = 0;
+    let lateCount = 0;
+    let sickCount = 0;
+    let leaveCount = 0;
+
+    attendanceDatabase.forEach(record => {
+      if (record.monkName === monkFullName) {
+        if (record.status === 'มา') comeCount++;
+        else if (record.status === 'สาย') lateCount++;
+        else if (record.status === 'ลาป่วย') sickCount++;
+        else if (record.status === 'ลากิจ') leaveCount++;
+      }
+    });
+
+    return `
+    <div class="monk-item g${g}">
+      <div class="monk-photo">${photoHtml}</div>
+      <div class="monk-info">
+        <div class="monk-name">${m.name} ${m.alias}</div>
+        <div class="monk-alias">${m.surname}</div>
+        <div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-top: 4px;">
+          <span class="badge-g${g}" style="padding: 2px 6px; border-radius: 10px; font-size: 10px; font-weight: bold; display: inline-block;">หมู่ ${g}</span>
+          <span style="font-size: 11px; font-weight: 700; color: var(--st-come); background: var(--st-come-lt); padding: 1px 6px; border-radius: 8px; display: inline-block;">มา: ${comeCount}</span>
+          <span style="font-size: 11px; font-weight: 700; color: var(--st-late); background: var(--st-late-lt); padding: 1px 6px; border-radius: 8px; display: inline-block;">สาย: ${lateCount}</span>
+          <span style="font-size: 11px; font-weight: 700; color: var(--st-sick); background: var(--st-sick-lt); padding: 1px 6px; border-radius: 8px; display: inline-block;">ป่วย: ${sickCount}</span>
+          <span style="font-size: 11px; font-weight: 700; color: var(--st-leave); background: var(--st-leave-lt); padding: 1px 6px; border-radius: 8px; display: inline-block;">กิจ: ${leaveCount}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setStatus(monkOrder, status, btn) {
+  if (!isTodaySelected() || !checkTimeLimit(currentSession)) {
+    showToast('⚠️ ไม่อนุญาตให้แก้ไขข้อมูล (เฉพาะวันนี้ในช่วงเวลากำหนดเท่านั้น)', 'warning');
+    return;
+  }
+
+  const row = btn.closest('.status-row');
+  row.querySelectorAll('.sbtn').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  attendance[monkOrder] = status;
+  
+  updateSessionStatusSummary();
+}
+
+function selectSession(session, btn) {
+  if (!isTodaySelected() || !checkTimeLimit(session)) {
+    showToast('⚠️ อยู่นอกเหนือกำหนดกรอบเวลาบันทึกและแก้ไขรอบ ' + session, 'warning');
+    return;
+  }
+  
+  currentSession = session;
+  document.querySelectorAll('.stab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  
+  extractAttendanceFromLocalDB();
+}
+
+function filterGroup(group, btn) {
+  currentGroup = group;
+  document.querySelectorAll('#groupTabs .gtab').forEach(b => {
+    b.className = 'gtab';
+  });
+  if (group === 'all') btn.classList.add('active-all');
+  else btn.className = `gtab active-g${group}`;
+  renderMonkList();
+}
+
+function filterMonkList(group, btn) {
+  currentMonkListGroup = group;
+  document.querySelectorAll('#monkListGroupTabs .gtab').forEach(b => b.className = 'gtab');
+  if (group === 'all') btn.classList.add('active-all');
+  else btn.className = `gtab active-g${group}`;
+  renderFullMonkList(group);
+}
+
+// ส่งบันทึกข้อมูลและนำมาอัปเดตใส่ฐานข้อมูลแคชในเครื่องทันที (ไร้การดีเลย์)
+async function saveAttendance() {
+  if (!isTodaySelected()) {
+    showToast('⚠️ ไม่อนุญาตให้แก้ไขย้อนหลังหรือล่วงหน้า', 'error');
+    return;
+  }
+  if (!checkTimeLimit(currentSession)) {
+    showToast('⚠️ ไม่สามารถบันทึกได้เนื่องจากอยู่นอกเวลาที่กำหนด', 'error');
+    return;
+  }
+
+  const rawDate = document.getElementById('recordDate').value;
+  const date = normalizeDateString(rawDate);
+
+  const records = allMonks
+    .filter(m => attendance[m.order])
+    .map(m => ({
+      group: m.group,
+      order: m.order,
+      name: m.name,
+      alias: m.alias,
+      status: attendance[m.order]
+    }));
+
+  if (!records.length) { 
+    showToast('กรุณาเลือกสถานะการมาเช็กชื่ออย่างน้อย 1 รายการ', 'error'); 
+    return; 
+  }
+
+  showLoading(true, "กำลังอัปเดตข้อมูลขึ้นคลาวด์...");
+  try {
+    const res = await apiPost({ action: 'saveAttendance', date, session: currentSession, records });
+    if (res.error) throw new Error(res.error);
+    
+    // อัปเดตแคช Database ในตัวเครื่องทันที เพื่อหลีกเลี่ยงการเสียเวลาโหลดข้อมูลใหม่จากเซิร์ฟเวอร์
+    // 1. นำข้อมูลเก่ายัดใส่ฟิลเตอร์เพื่อดึงออกเฉพาะของรอบนี้/วันนี้
+    attendanceDatabase = attendanceDatabase.filter(r => !(r.date === date && r.session === currentSession));
+    
+    // 2. ดึงสถานะปัจจุบันอัดกลับเข้าไปใหม่
+    records.forEach(r => {
+      attendanceDatabase.push({
+        date: date,
+        session: currentSession,
+        group: r.group,
+        monkName: r.name + ' ' + r.alias,
+        status: r.status
+      });
+    });
+
+    // อัปเดตการแสดงผลเมนูรายชื่อและข้อมูลต่างๆ ทันที
+    renderFullMonkList(currentGroup);
+    showToast(`✅ บันทึกประวัติสำเร็จเรียบร้อยแล้ว`, 'success');
+  } catch (e) {
+    showToast('ระบบบันทึกฐานข้อมูลผิดพลาด: ' + e.message, 'error');
+  } finally {
+    showLoading(false);
+  }
+}
+
+function switchStatGroup(group, btn) {
+  statsGroup = group;
+  document.querySelectorAll('#statGroupTabs .gtab').forEach(b => b.className = 'gtab');
+  if (group === 'all') btn.classList.add('active-all');
+  else btn.className = `gtab active-g${group}`;
+  loadStats();
+}
+
+// ============================================================
+// ฟังก์ชันคำนวณรายงานสถิติแบบ Instant (คำนวณแบบ Local In-Memory - แสดงเฉพาะรายบุคคลตามคำขอ)
+// ============================================================
+function loadStats() {
+  const fromRaw = document.getElementById('statFrom').value;
+  const toRaw   = document.getElementById('statTo').value;
+  const from = normalizeDateString(fromRaw);
+  const to   = normalizeDateString(toRaw);
+
+  const stats = {};
+  
+  // ประมวลผลจาก In-Memory Database ของหน้าเว็บทันที
+  attendanceDatabase.forEach(record => {
+    const rowDate = record.date;
+    if (rowDate < from || rowDate > to) return;
+    if (statsGroup !== 'all' && String(record.group) !== statsGroup) return;
+
+    // โหมดรายบุคคลเท่านั้น
+    const key = record.monkName;
+    if (!stats[key]) {
+      stats[key] = { 'เช้า': '', 'สาย': '', 'บ่าย': '', 'ค่ำ': '' };
+    }
+    stats[key][record.session] = record.status;
+  });
+
+  // เติมรายชื่อให้ครบถ้วนในโหมดรายบุคคล
+  allMonks.forEach(m => {
+    if (statsGroup !== 'all' && String(m.group) !== statsGroup) return;
+    const key = m.name + ' ' + m.alias;
+    if (!stats[key]) {
+      stats[key] = { 'เช้า': '', 'สาย': '', 'บ่าย': '', 'ค่ำ': '' };
+    }
+  });
+
+  renderStats(stats);
+}
+
+function renderStats(stats) {
+  const head = document.getElementById('statHead');
+  const body = document.getElementById('statBody');
+
+  // โหมดรายบุคคลแยก เช้า สาย บ่าย ค่ำ เท่านั้น
+  head.innerHTML = `<tr>
+    <th style="text-align:left; padding-left:10px;">รายชื่อ</th>
+    <th>เช้า</th>
+    <th>สาย</th>
+    <th>บ่าย</th>
+    <th>ค่ำ</th>
+  </tr>`;
+
+  let totalCome=0, totalLate=0, totalSick=0, totalLeave=0;
+  const keys = Object.keys(stats).sort((a, b) => {
+    const m1 = allMonks.find(m => (m.name + ' ' + m.alias) === a);
+    const m2 = allMonks.find(m => (m.name + ' ' + m.alias) === b);
+    if (m1 && m2) return m1.order - m2.order;
+    return a.localeCompare(b);
+  });
+
+  const filteredKeys = keys.filter(k => {
+    if (statsGroup === 'all') return true;
+    const monkObj = allMonks.find(m => (m.name + ' ' + m.alias) === k);
+    return monkObj && String(monkObj.group) === statsGroup;
+  });
+
+  const rows = filteredKeys.map(k => {
+    const s = stats[k];
+    
+    const getBadge = (status) => {
+      if (!status) return `<span class="status-badge empty">-</span>`;
+      if (status === 'มา') { totalCome++; return `<span class="status-badge come">มา</span>`; }
+      if (status === 'สาย') { totalLate++; return `<span class="status-badge late">สาย</span>`; }
+      if (status === 'ลาป่วย') { totalSick++; return `<span class="status-badge sick">ป่วย</span>`; }
+      if (status === 'ลากิจ') { totalLeave++; return `<span class="status-badge leave">กิจ</span>`; }
+      return `<span class="status-badge empty">-</span>`;
+    };
+
+    return `<tr>
+      <td style="text-align:left; padding-left:8px; font-weight:700; color:#1565C0;">${k}</td>
+      <td>${getBadge(s['เช้า'])}</td>
+      <td>${getBadge(s['สาย'])}</td>
+      <td>${getBadge(s['บ่าย'])}</td>
+      <td>${getBadge(s['ค่ำ'])}</td>
+    </tr>`;
+  });
+
+  body.innerHTML = rows.length ? rows.join('') : '<tr><td colspan="5" style="padding:15px;color:var(--txt2);">ไม่พบรายชื่อในระบบเช็กชื่อของกลุ่มนี้</td></tr>';
+
+  const chips = document.querySelectorAll('.chip .chip-num');
+  chips[0].textContent = totalCome;
+  chips[1].textContent = totalLate;
+  chips[2].textContent = totalSick;
+  chips[3].textContent = totalLeave;
+}
+
+function showPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  document.querySelector('.phone-scroll-area').scrollTop = 0;
+
+  if (id === 'pageStats') loadStats();
+  if (id === 'pageRecord') updateUIEditRights();
+}
+
+function showLoading(show, message = "กำลังโหลดข้อมูล...") {
+  const overlay = document.getElementById('loadingOverlay');
+  const textElem = document.getElementById('loadingOverlayText');
+  
+  if (show) {
+    textElem.textContent = message;
+    overlay.style.display = 'flex';
+  } else {
+    overlay.style.display = 'none';
+  }
+}
+
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' '+type : '');
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+</script>
 </body>
 </html>
